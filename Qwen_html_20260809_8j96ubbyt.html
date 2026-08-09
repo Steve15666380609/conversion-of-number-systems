@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多进制双向转换器</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --text: #333;
+            --border: #e0e0e0;
+            --error: #e74c3c;
+            --warn: #e67e22;
+            --success: #2ecc71;
+            --hex-color: #6c5ce7;
+            --bin-color: #00b894;
+            --oct-color: #e17055;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            color: var(--text);
+        }
+
+        .page-wrapper {
+            display: flex;
+            gap: 1.2rem;
+            max-width: 1200px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .converter-card {
+            background: var(--card);
+            padding: 1.6rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.07);
+            flex: 1 1 300px;
+            max-width: 380px;
+            min-width: 280px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.15rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .field-group { margin-bottom: 0.9rem; position: relative; }
+
+        label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: border-color 0.3s;
+        }
+
+        .prefix-tag {
+            padding: 0 9px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #999;
+            background: #fafafa;
+            border-right: 1px solid var(--border);
+            user-select: none;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+
+        input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 9px 10px;
+            font-size: 0.95rem;
+            font-family: 'Courier New', Courier, monospace;
+            background: transparent;
+            min-width: 0;
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+        .copy-icon {
+            padding: 5px 9px;
+            cursor: pointer;
+            color: #aaa;
+            transition: color 0.2s;
+            user-select: none;
+            font-size: 0.9rem;
+        }
+        .copy-icon:hover { opacity: 0.7; }
+        .copy-icon.copied { color: var(--success) !important; }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0.2rem 0;
+            color: #ccc;
+            font-size: 1rem;
+        }
+
+        .error-hint {
+            font-size: 0.72rem;
+            margin-top: 3px;
+            min-height: 0.9em;
+            opacity: 0;
+            transition: opacity 0.2s;
+            color: var(--error);
+        }
+        .error-hint.visible { opacity: 1; }
+
+        /* ===== 主题色 ===== */
+        .theme-hex h1 { color: var(--hex-color); }
+        .theme-hex .field-group.target label { color: var(--hex-color); }
+        .theme-hex .input-wrapper:focus-within { border-color: var(--hex-color); }
+        .theme-hex .copy-icon:hover { color: var(--hex-color); }
+
+        .theme-bin h1 { color: var(--bin-color); }
+        .theme-bin .field-group.target label { color: var(--bin-color); }
+        .theme-bin .input-wrapper:focus-within { border-color: var(--bin-color); }
+        .theme-bin .copy-icon:hover { color: var(--bin-color); }
+
+        .theme-oct h1 { color: var(--oct-color); }
+        .theme-oct .field-group.target label { color: var(--oct-color); }
+        .theme-oct .input-wrapper:focus-within { border-color: var(--oct-color); }
+        .theme-oct .copy-icon:hover { color: var(--oct-color); }
+
+        @media (max-width: 900px) {
+            .page-wrapper { justify-content: center; }
+            .converter-card { max-width: 100%; flex: 1 1 100%; }
+        }
+        @media (min-width: 901px) and (max-width: 1100px) {
+            .converter-card { flex: 1 1 45%; max-width: 48%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+    <!-- ========== 十进制 ⇄ 十六进制 ========== -->
+    <div class="converter-card theme-hex" id="hexCard">
+        <h1>🔢 十进制 ⇄ 十六进制</h1>
+        <div class="field-group">
+            <label>十进制 (Decimal)</label>
+            <div class="input-wrapper">
+                <span class="prefix-tag">DEC</span>
+                <input type="text" data-role="dec" placeholder="例如: 255" inputmode="numeric" autocomplete="off">
+                <span class="copy-icon" title="复制">📋</span>
+            </div>
+            <div class="error-hint"></div>
+        </div>
+        <div class="divider">⇅</div>
+        <div class="field-group target">
+            <label>十六进制 (Hexadecimal)</label>
+            <div class="input-wrapper">
+                <span class="prefix-tag">0x</span>
+                <input type="text" data-role="tgt" placeholder="例如: FF" autocomplete="off">
+                <span class="copy-icon" title="复制">📋</span>
+            </div>
+            <div class="error-hint"></div>
+        </div>
+    </div>
+
+    <!-- ========== 十进制 ⇄ 二进制 ========== -->
+    <div class="converter-card theme-bin" id="binCard">
+        <h1>💡 十进制 ⇄ 二进制</h1>
+        <div class="field-group">
+            <label>十进制 (Decimal)</label>
+            <div class="input-wrapper">
+                <span class="prefix-tag">DEC</span>
+                <input type="text" data-role="dec" placeholder="例如: 10" inputmode="numeric" autocomplete="off">
+                <span class="copy-icon" title="复制">📋</span>
+            </div>
+            <div class="error-hint"></div>
+        </div>
+        <div class="divider">⇅</div>
+        <div class="field-group target">
+            <label>二进制 (Binary)</label>
+            <div class="input-wrapper">
+                <span class="prefix-tag">0b</span>
+                <input type="text" data-role="tgt" placeholder="例如: 1010" autocomplete="off">
+                <span class="copy-icon" title="复制">📋</span>
+            </div>
+            <div class="error-hint"></div>
+        </div>
+    </div>
+
+    <!-- ========== 十进制 ⇄ 八进制 ========== -->
+    <div class="converter-card theme-oct" id="octCard">
+        <h1>🎱 十进制 ⇄ 八进制</h1>
+        <div class="field-group">
+            <label>十进制 (Decimal)</label>
+            <div class="input-wrapper">
+                <span class="prefix-tag">DEC</span>
+                <input type="text" data-role="dec" placeholder="例如: 64" inputmode="numeric" autocomplete="off">
+                <span class="copy-icon" title="复制">📋</span>
+            </div>
+            <div class="error-hint"></div>
+        </div>
+        <div class="divider">⇅</div>
+        <div class="field-group target">
+            <label>八进制 (Octal)</label>
+            <div class="input-wrapper">
+                <span class="prefix-tag">0o</span>
+                <input type="text" data-role="tgt" placeholder="例如: 100" autocomplete="off">
+                <span class="copy-icon" title="复制">📋</span>
+            </div>
+            <div class="error-hint"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+/**
+ * 通用双向转换器工厂
+ * @param {HTMLElement} card     - 卡片容器
+ * @param {number}      base     - 目标进制 (2 | 8 | 16)
+ * @param {RegExp}      validate - 目标进制输入验证正则（不含前缀）
+ * @param {string}      prefix   - 目标进制字面量前缀 ('0b' | '0o' | '0x')
+ * @param {string}      hintMsg  - 验证失败时的提示文字
+ */
+function createConverter(card, base, validate, prefix, hintMsg) {
+    const decInput = card.querySelector('[data-role="dec"]');
+    const tgtInput = card.querySelector('[data-role="tgt"]');
+    const decError = decInput.closest('.field-group').querySelector('.error-hint');
+    const tgtError = tgtInput.closest('.field-group').querySelector('.error-hint');
+    let isUpdating = false;
+
+    // ---------- DEC → TARGET ----------
+    decInput.addEventListener('input', () => {
+        if (isUpdating) return;
+        isUpdating = true;
+        clearErrors();
+
+        const raw = decInput.value.trim();
+        if (!raw) { tgtInput.value = ''; isUpdating = false; return; }
+
+        if (!/^-?\d+$/.test(raw)) {
+            showError(decError, '请输入有效的十进制整数');
+            isUpdating = false;
+            return;
+        }
+
+        try {
+            const num = BigInt(raw);
+            tgtInput.value = num.toString(base).toUpperCase();
+
+            if (absBigInt(num) > BigInt(Number.MAX_SAFE_INTEGER)) {
+                showError(decError, '⚠️ 超出安全整数范围，已用BigInt精确计算', true);
+            }
+        } catch (e) {
+            showError(decError, '转换出错');
+        }
+        isUpdating = false;
+    });
+
+    // ---------- TARGET → DEC ----------
+    tgtInput.addEventListener('input', () => {
+        if (isUpdating) return;
+        isUpdating = true;
+        clearErrors();
+
+        let raw = tgtInput.value.trim().toUpperCase();
+        // 去除用户可能粘贴进来的前缀
+        const upperPrefix = prefix.toUpperCase();
+        if (raw.startsWith(upperPrefix)) {
+            raw = raw.substring(upperPrefix.length);
+        }
+
+        if (!raw) { decInput.value = ''; isUpdating = false; return; }
+
+        if (!validate.test(raw)) {
+            showError(tgtError, hintMsg);
+            isUpdating = false;
+            return;
+        }
+
+        try {
+            const isNeg = raw.startsWith('-');
+            const clean = isNeg ? raw.substring(1) : raw;
+            const num = BigInt(`${prefix}${clean}`);
+            decInput.value = isNeg ? '-' + num.toString() : num.toString();
+
+            if (num > BigInt(Number.MAX_SAFE_INTEGER)) {
+                showError(tgtError, '⚠️ 超出安全整数范围，已用BigInt精确计算', true);
+            }
+        } catch (e) {
+            showError(tgtError, '转换出错，请检查输入');
+        }
+        isUpdating = false;
+    });
+
+    // ---------- 粘贴自动清理前缀 ----------
+    tgtInput.addEventListener('paste', () => {
+        setTimeout(() => {
+            const re = new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+            tgtInput.value = tgtInput.value.replace(re, '');
+            tgtInput.dispatchEvent(new Event('input'));
+        }, 0);
+    });
+
+    // ---------- 复制按钮 ----------
+    card.querySelectorAll('.copy-icon').forEach(icon => {
+        icon.addEventListener('click', () => {
+            const val = icon.closest('.input-wrapper').querySelector('input').value;
+            if (!val) return;
+            navigator.clipboard.writeText(val).then(() => flashIcon(icon)).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = val;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                flashIcon(icon);
+            });
+        });
+    });
+
+    // ---------- 内部工具 ----------
+    function showError(el, msg, isWarn = false) {
+        el.textContent = msg;
+        el.classList.add('visible');
+        el.style.color = isWarn ? 'var(--warn)' : '';
+    }
+    function clearErrors() {
+        [decError, tgtError].forEach(el => { el.classList.remove('visible'); el.style.color = ''; });
+    }
+    function flashIcon(icon) {
+        icon.textContent = '✅';
+        icon.classList.add('copied');
+        setTimeout(() => { icon.textContent = '📋'; icon.classList.remove('copied'); }, 1500);
+    }
+    function absBigInt(n) { return n < 0n ? -n : n; }
+}
+
+// ========== 初始化三个转换器 ==========
+createConverter(
+    document.getElementById('hexCard'),
+    16, /^-?[0-9A-F]+$/, '0x', '仅允许 0-9 和 A-F'
+);
+
+createConverter(
+    document.getElementById('binCard'),
+    2, /^-?[01]+$/, '0b', '仅允许 0 和 1'
+);
+
+createConverter(
+    document.getElementById('octCard'),
+    8, /^-?[0-7]+$/, '0o', '仅允许 0-7'
+);
+</script>
+
+</body>
+</html>
